@@ -1,3 +1,20 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.toolbar nav {
+  padding: 0;
+  flex: 1;
+}
+
+.toolbar > a {
+  text-decoration: none;
+  font-size: 1.2rem;
+}
+
 nav[aria-label="Breadcrumb"] {
   padding: 0;
 }
@@ -25,6 +42,24 @@ table.table-hover td:last-child {
 table.table-hover tr.file-entry.selected td,
 table.table-hover tr.file-entry.selected:hover td {
   background-color: var(--mu-primary-background);
+}
+
+.delete-cell {
+  width: 3rem;
+  text-align: center;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  opacity: 0.5;
+}
+
+.btn-delete:hover {
+  opacity: 1;
 }
 
 .actions {

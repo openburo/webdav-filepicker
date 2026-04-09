@@ -14,8 +14,20 @@ function updateButton() {
   }
 }
 
+function sendMessage(message) {
+  if (window.parent !== window && CLIENT_URL) {
+    window.parent.postMessage(message, CLIENT_URL);
+  }
+}
+
+async function fetchContent(path) {
+  const resp = await fetch("/api/content" + path);
+  const data = await resp.json();
+  return data.content;
+}
+
 document.querySelectorAll(".file-entry[data-path]").forEach(el => {
-  el.addEventListener("click", (e) => {
+  el.addEventListener("click", () => {
     const file = {
       name: el.dataset.name,
       path: el.dataset.path,
@@ -23,11 +35,18 @@ document.querySelectorAll(".file-entry[data-path]").forEach(el => {
       contentType: el.dataset.contentType,
     };
 
-    const idx = selectedFiles.findIndex(f => f.path === file.path);
-    if (idx >= 0) {
-      selectedFiles.splice(idx, 1);
-      el.classList.remove("selected");
+    if (MULTIPLE) {
+      const idx = selectedFiles.findIndex(f => f.path === file.path);
+      if (idx >= 0) {
+        selectedFiles.splice(idx, 1);
+        el.classList.remove("selected");
+      } else {
+        selectedFiles.push(file);
+        el.classList.add("selected");
+      }
     } else {
+      document.querySelectorAll(".file-entry").forEach(e => e.classList.remove("selected"));
+      selectedFiles.length = 0;
       selectedFiles.push(file);
       el.classList.add("selected");
     }
@@ -36,14 +55,39 @@ document.querySelectorAll(".file-entry[data-path]").forEach(el => {
   });
 });
 
-document.getElementById("btn-select").addEventListener("click", () => {
-  if (selectedFiles.length > 0) {
-    console.log("Selected:", selectedFiles);
-    alert("Fichiers sélectionnés:\n" + selectedFiles.map(f => f.name).join("\n"));
-  }
+document.getElementById("btn-select")?.addEventListener("click", async () => {
+  if (selectedFiles.length === 0) return;
+
+  const wantUrl = INTENT_TYPE.includes("url");
+  const wantContent = INTENT_TYPE.includes("content");
+  const fileUrl = (path) => WEBDAV_BASE + path;
+
+  const results = await Promise.all(selectedFiles.map(async (f) => {
+    const result = {
+      name: f.name,
+      mimeType: f.contentType,
+      size: f.size,
+    };
+    if (wantUrl) {
+      result.sharingUrl = fileUrl(f.path);
+      result.downloadUrl = fileUrl(f.path);
+    }
+    if (wantContent) {
+      result.payload = await fetchContent(f.path);
+    }
+    return result;
+  }));
+
+  sendMessage({
+    status: "done",
+    id: INTENT_ID,
+    results,
+  });
 });
 
-document.getElementById("btn-cancel").addEventListener("click", () => {
-  console.log("Cancelled");
-  alert("Annulé");
+document.getElementById("btn-cancel")?.addEventListener("click", () => {
+  sendMessage({
+    status: "cancel",
+    id: INTENT_ID,
+  });
 });

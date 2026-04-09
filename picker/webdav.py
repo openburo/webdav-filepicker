@@ -5,15 +5,23 @@ WEBDAV_URL = "http://localhost:8080"
 client = Client(WEBDAV_URL)
 
 
+def download_file(path: str) -> bytes:
+    """Download a file and return its content."""
+    import io
+
+    buf = io.BytesIO()
+    client.download_fileobj(path, buf)
+    return buf.getvalue()
+
+
+def remove(path: str) -> None:
+    """Delete a file or directory."""
+    client.remove(path)
+
+
 def mkdir(path: str) -> None:
     """Create a directory."""
     client.mkdir(path)
-
-
-def upload_file(directory: str, filename: str, fileobj) -> None:
-    """Upload a file to the given directory."""
-    remote_path = directory.rstrip("/") + "/" + filename
-    client.upload_fileobj(fileobj, remote_path)
 
 
 def list_files(path: str = "/") -> list[dict]:
@@ -28,7 +36,8 @@ def list_files(path: str = "/") -> list[dict]:
         is_dir = entry["type"] == "directory"
         results.append(
             {
-                "name": entry.get("display_name") or href.rstrip("/").rsplit("/", 1)[-1],
+                "name": entry.get("display_name")
+                or href.rstrip("/").rsplit("/", 1)[-1],
                 "path": href,
                 "is_dir": is_dir,
                 "size": entry.get("content_length") if not is_dir else None,

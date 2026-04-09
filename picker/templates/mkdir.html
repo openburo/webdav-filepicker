@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouveau dossier</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mu.azure.css') }}">
+  </head>
+  <body>
+    <main class="container">
+      <h1>Nouveau dossier</h1>
+      <p>Créer un dossier dans <strong>{{ current_path }}</strong></p>
+      <form method="post" action="{{ url_for('create_dir', path=current_path.lstrip('/'), **request.args) }}">
+        <input type="text" name="dirname" placeholder="Nom du dossier" required autofocus>
+        <div role="group">
+          <a href="{{ url_for('browse', path=current_path.lstrip('/'), **request.args) }}" class="btn btn-secondary">Annuler</a>
+          <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

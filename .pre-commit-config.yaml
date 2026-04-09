@@ -19,14 +19,6 @@ repos:
     rev: 3.0.11
     hooks:
       - id: djhtml
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
-    hooks:
-    - id: codespell
-      additional_dependencies:
-        - tomli
-      exclude: ".*\\.min\\..*|translations|\\.css$|^tests|fomanticui|doc/locales"
-      args: [--write-changes]
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v4.4.0
     hooks:

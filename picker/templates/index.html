@@ -1,81 +1,104 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="light">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebDAV File Picker</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='mu.azure.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-  <main class="container">
-    <h1>WebDAV File Picker</h1>
-
-    <nav aria-label="Breadcrumb">
-      <ul class="breadcrumb">
-        {% for crumb in breadcrumb %}
-          {% if loop.last %}
-            <li aria-current="page">{{ crumb.name }}</li>
-          {% else %}
-            <li><a href="{{ url_for('browse', path=crumb.path.lstrip('/')) }}">{{ crumb.name }}</a></li>
-          {% endif %}
-        {% endfor %}
-      </ul>
-    </nav>
-
-    {% if entries %}
-      <table class="table-hover">
-        <thead>
-          <tr>
-            <th></th>
-            <th>Nom</th>
-            <th>Taille</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for entry in entries %}
-            {% if entry.is_dir %}
-              <tr class="clickable" onclick="location.href='{{ url_for('browse', path=entry.path.lstrip('/')) }}'">
-                <td>📁</td>
-                <td><a href="{{ url_for('browse', path=entry.path.lstrip('/')) }}">{{ entry.name }}</a></td>
-                <td></td>
-              </tr>
-            {% else %}
-              <tr class="clickable file-entry" data-path="{{ entry.path }}" data-name="{{ entry.name }}" data-size="{{ entry.size or 0 }}" data-content-type="{{ entry.content_type }}">
-                <td>📄</td>
-                <td>{{ entry.name }}</td>
-                <td>{{ entry.size | filesizeformat if entry.size else '' }}</td>
-              </tr>
-            {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p>Dossier vide.</p>
-    {% endif %}
-
-    <div class="actions">
-      <div role="group">
-        <button id="btn-cancel" class="btn btn-secondary">Annuler</button>
-        <button id="btn-select" class="btn btn-primary" disabled>Sélectionner</button>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebDAV File Picker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mu.azure.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    {% for message in get_flashed_messages() %}
+      <div class="toast toast-top-right">
+        <div class="alert alert-success alert-dismissible" role="alert">
+          <p>{{ message }}</p>
+          <button class="alert-close" aria-label="Close" onclick="this.closest('.toast').remove()">&times;</button>
+        </div>
       </div>
-    </div>
+    {% endfor %}
 
-    <form method="post" action="{{ url_for('create_dir', path=current_path.lstrip('/')) }}">
-      <div role="group">
-        <input type="text" name="dirname" placeholder="Nouveau dossier" required>
-        <button type="submit" class="btn btn-secondary">Créer</button>
+    <main class="container">
+      <h1>WebDAV File Picker</h1>
+
+      <div class="toolbar">
+        <nav aria-label="Breadcrumb">
+          <ul class="breadcrumb">
+            {% for crumb in breadcrumb %}
+              {% if loop.last %}
+                <li aria-current="page">{{ crumb.name }}</li>
+              {% else %}
+                <li><a href="{{ url_for('browse', path=crumb.path.lstrip('/'), **request.args) }}">{{ crumb.name }}</a></li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        </nav>
+        <a href="{{ url_for('new_dir', path=current_path.lstrip('/'), **request.args) }}" title="Nouveau dossier">📁+</a>
       </div>
-    </form>
 
-    <form method="post" enctype="multipart/form-data" action="{{ url_for('upload', path=current_path.lstrip('/')) }}">
-      <div role="group">
-        <input type="file" name="files" multiple required>
-        <button type="submit" class="btn btn-secondary">Uploader</button>
-      </div>
-    </form>
-  </main>
+      {% if entries %}
+        <table class="table-hover">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Nom</th>
+              <th>Taille</th>
+              {% if not intent.client_url %}<th></th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+              {% if entry.is_dir %}
+                <tr class="clickable" onclick="location.href='{{ url_for('browse', path=entry.path.lstrip('/'), **request.args) }}'">
+                  <td>📁</td>
+                  <td><a href="{{ url_for('browse', path=entry.path.lstrip('/'), **request.args) }}">{{ entry.name }}</a></td>
+                  <td></td>
+                  {% if not intent.client_url %}
+                    <td class="delete-cell">
+                      <form method="post" action="{{ url_for('delete', path=entry.path.lstrip('/')) }}" onclick="event.stopPropagation()" onsubmit="return confirm('Supprimer le dossier {{ entry.name }} ?')">
+                        <button type="submit" class="btn-delete" title="Supprimer">🗑️</button>
+                      </form>
+                    </td>
+                  {% endif %}
+                </tr>
+              {% else %}
+                <tr class="clickable file-entry" data-path="{{ entry.path }}" data-name="{{ entry.name }}" data-size="{{ entry.size or 0 }}" data-content-type="{{ entry.content_type }}">
+                  <td>📄</td>
+                  <td>{{ entry.name }}</td>
+                  <td>{{ entry.size | filesizeformat if entry.size else '' }}</td>
+                  {% if not intent.client_url %}
+                    <td class="delete-cell">
+                      <form method="post" action="{{ url_for('delete', path=entry.path.lstrip('/')) }}" onclick="event.stopPropagation()" onsubmit="return confirm('Supprimer {{ entry.name }} ?')">
+                        <button type="submit" class="btn-delete" title="Supprimer">🗑️</button>
+                      </form>
+                    </td>
+                  {% endif %}
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>Dossier vide.</p>
+      {% endif %}
 
-  <script src="{{ url_for('static', filename='picker.js') }}"></script>
-</body>
+      {% if intent.client_url %}
+        <div class="actions">
+          <div role="group">
+            <button id="btn-cancel" class="btn btn-secondary">Annuler</button>
+            <button id="btn-select" class="btn btn-primary" disabled>Sélectionner</button>
+          </div>
+        </div>
+      {% endif %}
+
+    </main>
+
+    <script>
+      const MULTIPLE = {{ intent.multiple | tojson }};
+      const CLIENT_URL = {{ intent.client_url | tojson }};
+      const INTENT_ID = {{ intent.intent_id | tojson }};
+      const INTENT_TYPE = {{ intent.type | tojson }};
+      const WEBDAV_BASE = "http://10.4.0.32:8080";
+    </script>
+    <script src="{{ url_for('static', filename='picker.js') }}"></script>
+  </body>
 </html>

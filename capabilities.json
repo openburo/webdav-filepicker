@@ -1,0 +1,15 @@
+{
+    "id": "webdav-openburo",
+    "name": "Open-Buro WebDAV file picker",
+    "url": "http://10.4.0.32:5000",
+    "version": "1",
+    "capabilities": [
+        {
+            "action": "PICK",
+            "properties": {
+                "mimeTypes": ["*/*"]
+            },
+            "path": "http://10.4.0.32:5000/browse/"
+        }
+    ]
+}
