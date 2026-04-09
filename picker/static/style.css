@@ -22,8 +22,9 @@ table.table-hover td:last-child {
   text-align: right;
 }
 
-tr.file-entry.selected {
-  background: var(--mu-primary-background);
+table.table-hover tr.file-entry.selected td,
+table.table-hover tr.file-entry.selected:hover td {
+  background-color: var(--mu-primary-background);
 }
 
 .actions {
