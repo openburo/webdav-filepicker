@@ -36,10 +36,10 @@ async def create_dir(path: str = "/"):
 @app.route("/upload/<path:path>", methods=["POST"])
 async def upload(path: str = "/"):
     path = normalize_path(path)
-    files = await request.files
-    f = files.get("file")
-    if f and f.filename:
-        upload_file(path, f.filename, f.stream)
+    files = (await request.files).getlist("files")
+    for f in files:
+        if f.filename:
+            upload_file(path, f.filename, f.stream)
     return redirect(url_for("browse", path=path.lstrip("/")))
 
 
