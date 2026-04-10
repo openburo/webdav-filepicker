@@ -1,5 +1,5 @@
 const selectedFiles = [];
-let savePayload = null;
+let saveData = null;
 
 
 function updateButton() {
@@ -18,8 +18,9 @@ function updateButton() {
 }
 
 function sendMessage(message) {
-  if (window.parent !== window && CLIENT_URL) {
-    window.parent.postMessage(message, CLIENT_URL);
+  const parentWindow = window.opener || window.parent;
+  if (CLIENT_URL) {
+    parentWindow.postMessage(message, CLIENT_URL);
   }
 }
 
@@ -100,44 +101,69 @@ if (ACTION === "SAVE") {
 
   // Listen for payload from client
   window.addEventListener("message", (e) => {
-    if (!e.data || e.data.action !== "upload") return;
-    if (e.data.id !== INTENT_ID) return;
-    savePayload = e.data.payload;
+    console.debug("filePicker received message", e.data)
+    if (!e.data || e.data.status !== "save") {
+        console.warn("Bad status");
+        return
+    }
+    if (e.data.id !== INTENT_ID) {
+        console.warn("Bad intent ID");
+        return
+    };
+    saveData = e.data;
+
+    const filenameInput = document.getElementById("save-filename");
+    const fileList = document.getElementById("save-file-list");
+    if (saveData.results.length === 1 && filenameInput) {
+      filenameInput.value = saveData.results[0].name;
+      filenameInput.classList.remove("hidden");
+    } else if (fileList) {
+      fileList.innerHTML = "<p>" + saveData.results.map(f => f.name).join(", ") + "</p>";
+    }
   });
 
   document.getElementById("btn-save")?.addEventListener("click", async () => {
-    const filename = document.getElementById("save-filename").value.trim();
-    if (!filename) return;
-
-    const body = { name: filename };
-
-    if (SOURCE_TYPE === "downloadUrl" && DOWNLOAD_URL) {
-      body.downloadUrl = DOWNLOAD_URL;
-    } else if (savePayload) {
-      body.payload = savePayload;
-    } else if (DOWNLOAD_URL) {
-      body.downloadUrl = DOWNLOAD_URL;
-    } else {
+    if (!saveData || !saveData.results || saveData.results.length === 0) {
       sendMessage({ status: "error", id: INTENT_ID, message: "No file data received" });
       return;
     }
 
-    const resp = await fetch("/api/save" + CURRENT_PATH, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    // In single mode, use the filename input if available
+    const filenameInput = document.getElementById("save-filename");
+    const files = saveData.results.map((f, i) => {
+      const name = (i === 0 && filenameInput && filenameInput.value.trim())
+        ? filenameInput.value.trim()
+        : f.name;
+      return { ...f, name };
     });
 
-    if (resp.ok) {
-      const result = await resp.json();
-      sendMessage({
-        status: "done",
-        id: INTENT_ID,
-        results: [result],
+    const results = [];
+    for (const f of files) {
+      const body = { name: f.name };
+      if (f.payload) {
+        body.payload = f.payload;
+      } else if (f.downloadUrl) {
+        body.downloadUrl = f.downloadUrl;
+      } else {
+        sendMessage({ status: "error", id: INTENT_ID, message: `No data for ${f.name}` });
+        return;
+      }
+
+      const resp = await fetch("/api/save" + CURRENT_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
-    } else {
-      sendMessage({ status: "error", id: INTENT_ID, message: "Upload failed" });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        sendMessage({ status: "error", id: INTENT_ID, message: err.error || `Upload failed for ${f.name}` });
+        return;
+      }
+      results.push(await resp.json());
     }
+
+    sendMessage({ status: "done", id: INTENT_ID, results });
   });
 }
 

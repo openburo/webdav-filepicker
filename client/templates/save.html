@@ -29,8 +29,8 @@
       <p><a href="{{ url_for('index') }}">&larr; Retour</a></p>
 
       <form id="save-form">
-        <label>Fichier à envoyer
-          <input type="file" name="file" required>
+        <label>Fichiers à envoyer
+          <input type="file" name="files" multiple required>
         </label>
 
         <fieldset>
@@ -53,45 +53,48 @@
     <script>
       const PICKER_URL = "{{ picker_url }}";
       let currentIntentId = null;
-      let pendingPayload = null;
+      let pendingFiles = null;
+
+      function readFileAsBase64(file) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(",")[1]);
+          reader.readAsDataURL(file);
+        });
+      }
 
       document.getElementById("save-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         const form = e.target;
-        const file = form.querySelector('[name="file"]').files[0];
-        if (!file) return;
+        const files = Array.from(form.querySelector('[name="files"]').files);
+        if (files.length === 0) return;
 
         const sourceType = form.querySelector('[name="sourceType"]:checked').value;
 
         currentIntentId = generateId();
 
         const params = new URLSearchParams();
-        params.set("action", "SAVE");
         params.set("clientUrl", window.location.origin);
         params.set("id", currentIntentId);
-        params.set("name", file.name);
-        params.set("mimeType", file.type);
-        params.set("size", file.size);
         params.set("sourceType", sourceType);
 
         if (sourceType === "payload") {
-          const reader = new FileReader();
-          reader.onload = () => {
-            pendingPayload = reader.result.split(",")[1];
-            document.getElementById("picker-iframe").src = PICKER_URL + "?" + params.toString();
-            document.getElementById("picker-overlay").classList.add("active");
-          };
-          reader.readAsDataURL(file);
-        } else {
-          document.getElementById("picker-iframe").src = PICKER_URL + "?" + params.toString();
-          document.getElementById("picker-overlay").classList.add("active");
+          pendingFiles = await Promise.all(files.map(async (f) => ({
+            name: f.name,
+            mimeType: f.type,
+            size: f.size,
+            payload: await readFileAsBase64(f),
+          })));
         }
+
+        document.getElementById("picker-iframe").src = PICKER_URL + "?" + params.toString();
+        document.getElementById("picker-overlay").classList.add("active");
       });
 
       function closePicker() {
         document.getElementById("picker-overlay").classList.remove("active");
         document.getElementById("picker-iframe").src = "";
-        pendingPayload = null;
+        pendingFiles = null;
       }
 
       document.getElementById("picker-overlay").addEventListener("click", (e) => {
@@ -108,10 +111,10 @@
 
         const result = document.getElementById("result");
 
-        if (data.status === "ready" && pendingPayload) {
-          const iframe = document.getElementById("picker-iframe");
-          iframe.contentWindow.postMessage(
-            { action: "upload", id: currentIntentId, payload: pendingPayload },
+        if (data.status === "ready" && pendingFiles) {
+          const target = document.getElementById("picker-iframe").contentWindow;
+          target.postMessage(
+            { status: "save", id: currentIntentId, results: pendingFiles },
             pickerOrigin
           );
         } else if (data.status === "done") {
@@ -120,7 +123,7 @@
           ).join("");
           result.innerHTML = `
           <div class="alert alert-success alert-dismissible">
-            <span class="alert-title">Fichier enregistré</span>
+            <span class="alert-title">Fichier(s) enregistré(s)</span>
             <table class="table-compact">
               <thead><tr><th>Nom</th></tr></thead>
               <tbody>${rows}</tbody>

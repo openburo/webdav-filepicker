@@ -6,3 +6,13 @@ wheels/
 *.egg-info
 .venv
 *.sqlite
+storage/*
+!storage/Documents/
+!storage/Images/
+storage/Documents/*
+!storage/Documents/rapport.md
+!storage/Documents/notes.txt
+!storage/Documents/budget.csv
+storage/Images/*
+!storage/Images/photo.png
+!storage/Images/diagram.svg

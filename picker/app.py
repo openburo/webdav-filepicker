@@ -26,6 +26,14 @@ import os
 
 app = Quart(__name__)
 app.secret_key = "dev"
+
+
+@app.after_request
+async def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
+
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 PUBLIC_URL = os.environ.get("PUBLIC_URL", "")
 
@@ -67,7 +75,7 @@ def matches_mime_filter(content_type: str, allowed: list[str]) -> bool:
 def parse_intent_params() -> dict:
     """Parse intent parameters from query string."""
     return {
-        "action": request.args.get("action", "PICK"),
+        "action": "",
         "client_url": request.args.get("clientUrl", ""),
         "intent_id": request.args.get("id", ""),
         "multiple": request.args.get("multiple", "false") == "true",
@@ -100,7 +108,7 @@ async def capabilities():
                 {
                     "action": "SAVE",
                     "properties": {"mimeTypes": ["*/*"]},
-                    "path": public_base_url() + url_for("browse"),
+                    "path": public_base_url() + url_for("save_browse"),
                 },
             ],
         }
@@ -169,8 +177,9 @@ async def content(path: str):
     return jsonify({"content": b64encode(data).decode()})
 
 
+@app.route("/api/save/", methods=["POST"])
 @app.route("/api/save/<path:path>", methods=["POST"])
-async def api_save(path: str):
+async def api_save(path: str = "/"):
     """Save a file to the given directory. Accepts JSON with payload (base64) or downloadUrl."""
     if not path.startswith("/"):
         path = "/" + path
@@ -182,7 +191,10 @@ async def api_save(path: str):
         data = download_from_url(body["downloadUrl"])
     else:
         return jsonify({"error": "No payload or downloadUrl provided"}), 400
-    upload_bytes(path, name, data)
+    try:
+        upload_bytes(path, name, data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     file_path = path.rstrip("/") + "/" + name
     return jsonify(
         {
@@ -194,12 +206,10 @@ async def api_save(path: str):
     )
 
 
-@app.route("/")
-@app.route("/browse/")
-@app.route("/browse/<path:path>")
-async def browse(path: str = "/"):
+async def _browse(path: str, action: str):
     path = normalize_path(path)
     intent = parse_intent_params()
+    intent["action"] = action
     entries = list_files(path)
 
     dirs = sorted([e for e in entries if e["is_dir"]], key=lambda e: e["name"])
@@ -212,10 +222,25 @@ async def browse(path: str = "/"):
             if matches_mime_filter(f["content_type"], intent["allowed_mime_types"])
         ]
 
+    browse_route = "save_browse" if action == "SAVE" else "browse"
     return await render_template(
         "index.html",
         entries=[*dirs, *files],
         breadcrumb=build_breadcrumb(path),
         current_path=path,
         intent=intent,
+        browse_route=browse_route,
     )
+
+
+@app.route("/")
+@app.route("/browse/")
+@app.route("/browse/<path:path>")
+async def browse(path: str = "/"):
+    return await _browse(path, "PICK")
+
+
+@app.route("/save/")
+@app.route("/save/<path:path>")
+async def save_browse(path: str = "/"):
+    return await _browse(path, "SAVE")

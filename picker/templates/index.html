@@ -34,9 +34,9 @@
               {% elif loop.last %}
                 <li aria-current="page">{{ crumb.name }}</li>
               {% elif crumb.is_home %}
-                <li><a href="{{ url_for('browse', path=crumb.path.lstrip('/'), **request.args) }}">{{ icon("home", 28) }}</a></li>
+                <li><a href="{{ url_for(browse_route, path=crumb.path.lstrip('/'), **request.args) }}">{{ icon("home", 28) }}</a></li>
               {% else %}
-                <li><a href="{{ url_for('browse', path=crumb.path.lstrip('/'), **request.args) }}">{{ crumb.name }}</a></li>
+                <li><a href="{{ url_for(browse_route, path=crumb.path.lstrip('/'), **request.args) }}">{{ crumb.name }}</a></li>
               {% endif %}
             {% endfor %}
           </ul>
@@ -59,7 +59,7 @@
               {% if entry.is_dir %}
                 <tr>
                   <td>{{ icon("folder") }}</td>
-                  <td><a href="{{ url_for('browse', path=entry.path.lstrip('/'), **request.args) }}">{{ entry.name }}</a></td>
+                  <td><a href="{{ url_for(browse_route, path=entry.path.lstrip('/'), **request.args) }}">{{ entry.name }}</a></td>
                   <td></td>
                   {% if not intent.client_url %}
                     <td class="delete-cell">
@@ -107,10 +107,9 @@
       {% if intent.client_url %}
         <div class="actions">
           {% if intent.action == "SAVE" %}
-            <div role="group">
-              <input type="text" id="save-filename" value="{{ intent.save_name }}" placeholder="Nom du fichier">
-              <button id="btn-save" class="btn btn-primary">Enregistrer ici</button>
-            </div>
+            <div id="save-file-list"></div>
+            <input type="text" id="save-filename" placeholder="Nom du fichier" class="hidden">
+            <button id="btn-save" class="btn btn-primary">Enregistrer ici</button>
           {% else %}
             <button id="btn-select" class="btn btn-primary" disabled>Sélectionner</button>
           {% endif %}

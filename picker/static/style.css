@@ -1,3 +1,7 @@
+.hidden {
+  display: none;
+}
+
 .close-btn {
   all: unset;
   position: fixed !important;
