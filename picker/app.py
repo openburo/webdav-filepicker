@@ -83,7 +83,7 @@ def parse_intent_params() -> dict:
     }
 
 
-@app.route("/.well-known/capabilities.json")
+@app.route("/.well-known/openburo-capabilities.json")
 async def capabilities():
     return jsonify(
         {

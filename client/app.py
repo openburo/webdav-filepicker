@@ -8,7 +8,9 @@ PICKER_BASE_URL = "http://10.4.0.32:5000"
 
 async def load_capabilities() -> dict:
     async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{PICKER_BASE_URL}/.well-known/capabilities.json")
+        resp = await client.get(
+            f"{PICKER_BASE_URL}/.well-known/openburo-capabilities.json"
+        )
         return resp.json()
 
 
