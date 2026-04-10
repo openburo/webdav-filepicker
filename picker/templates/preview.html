@@ -1,0 +1,40 @@
+{% from "icons.html" import icon %}
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ file.name }} — WebDAV File Picker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mu.azure.css') }}">
+    <style>
+      body { background: var(--mu-secondary-background); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+      .card { background: white; border-radius: 0.5rem; padding: 2rem; max-width: 600px; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+      .preview-image { max-width: 100%; border-radius: 0.25rem; margin: 1rem 0; }
+      .file-meta { margin: 1rem 0; }
+      .file-meta dt { font-weight: 600; }
+      .file-meta dd { margin-bottom: 0.5rem; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <p><a href="{{ parent_url }}">{{ icon("home", 20) }} Retour</a></p>
+
+      <h1>{{ icon("file", 28) }} {{ file.name }}</h1>
+
+      {% if is_image %}
+        <img class="preview-image" src="{{ raw_url }}" alt="{{ file.name }}">
+      {% endif %}
+
+      <dl class="file-meta">
+        <dt>Type</dt>
+        <dd>{{ file.content_type }}</dd>
+        <dt>Taille</dt>
+        <dd>{{ file.size | filesizeformat if file.size else 'Inconnue' }}</dd>
+        <dt>Modifié</dt>
+        <dd>{{ file.modified or 'Inconnu' }}</dd>
+        <dt>Téléchargement</dt>
+        <dd><a href="{{ raw_url }}" download="{{ file.name }}">{{ file.name }}</a></dd>
+      </dl>
+    </div>
+  </body>
+</html>
