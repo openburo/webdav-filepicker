@@ -124,6 +124,7 @@ if (ACTION === "SAVE") {
 
   document.getElementById("btn-save")?.addEventListener("click", async () => {
     if (!saveData || !saveData.results || saveData.results.length === 0) {
+      console.warn("save data")
       sendMessage({ status: "error", id: INTENT_ID, message: "No file data received" });
       return;
     }
@@ -163,6 +164,7 @@ if (ACTION === "SAVE") {
       results.push(await resp.json());
     }
 
+    console.log("save done", results)
     sendMessage({ status: "done", id: INTENT_ID, results });
   });
 }

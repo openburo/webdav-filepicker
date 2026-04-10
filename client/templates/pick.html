@@ -5,24 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PICK — Client</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='mu.amber.css') }}">
-    <script src="{{ url_for('static', filename='htmx.min.js') }}"></script>
-    <style>
-      #picker-overlay {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-      }
-      #picker-overlay.active { display: flex; }
-      #picker-iframe {
-        width: 80%; height: 80%;
-        border: none; border-radius: 0.5rem;
-        background: white;
-      }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='client.css') }}">
   </head>
   <body>
     <main class="container">
@@ -52,6 +35,12 @@
           <label><input type="checkbox" name="type" value="payload"> Payload (base64)</label>
         </fieldset>
 
+        <fieldset>
+          <legend>Mode d'ouverture</legend>
+          <label><input type="radio" name="display" value="iframe" checked> Iframe</label>
+          <label><input type="radio" name="display" value="popup"> Popup</label>
+        </fieldset>
+
         <button type="submit" class="btn btn-primary">Ouvrir le picker</button>
       </form>
 
@@ -63,60 +52,26 @@
     </main>
 
     <script src="{{ url_for('static', filename='utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='picker-bridge.js') }}"></script>
     <script>
-      const PICKER_URL = "{{ picker_url }}";
-      let currentIntentId = null;
+      const bridge = new PickerBridge("{{ picker_url }}");
 
       document.getElementById("picker-form").addEventListener("submit", (e) => {
         e.preventDefault();
         const form = e.target;
 
-        const multiple = form.querySelector('[name="multiple"]').checked;
-        const mimeSelect = form.querySelector('[name="allowedMimeTypes"]');
-        const allowedMimeTypes = Array.from(mimeSelect.selectedOptions).map(o => o.value);
-        const typeCheckboxes = form.querySelectorAll('[name="type"]:checked');
-        const types = Array.from(typeCheckboxes).map(cb => cb.value);
-
-        currentIntentId = generateId();
+        bridge.display = form.querySelector('[name="display"]:checked').value;
 
         const params = new URLSearchParams();
-        params.set("clientUrl", window.location.origin);
-        params.set("id", currentIntentId);
-        params.set("multiple", multiple);
+        params.set("multiple", form.querySelector('[name="multiple"]').checked);
+
+        const allowedMimeTypes = Array.from(form.querySelector('[name="allowedMimeTypes"]').selectedOptions).map(o => o.value);
         if (allowedMimeTypes.length > 0) params.set("allowedMimeTypes", allowedMimeTypes.join(","));
+
+        const types = Array.from(form.querySelectorAll('[name="type"]:checked')).map(cb => cb.value);
         if (types.length > 0) params.set("type", types.join(","));
 
-        document.getElementById("picker-iframe").src = PICKER_URL + "?" + params.toString();
-        document.getElementById("picker-overlay").classList.add("active");
-      });
-
-      function closePicker() {
-        document.getElementById("picker-overlay").classList.remove("active");
-        document.getElementById("picker-iframe").src = "";
-      }
-
-      document.getElementById("picker-overlay").addEventListener("click", (e) => {
-        if (e.target === e.currentTarget) closePicker();
-      });
-
-      window.addEventListener("message", (e) => {
-        const pickerOrigin = new URL(PICKER_URL).origin;
-        if (e.origin !== pickerOrigin) return;
-
-        const data = e.data;
-        if (!data || !data.status) return;
-        if (data.id !== currentIntentId) return;
-
-        if (["done", "cancel", "error"].includes(data.status)) {
-          fetch("/result", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
-          })
-            .then(r => r.text())
-            .then(html => { document.getElementById("result").innerHTML = html; });
-          closePicker();
-        }
+        bridge.open(params);
       });
     </script>
   </body>
