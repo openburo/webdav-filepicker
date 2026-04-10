@@ -35,14 +35,18 @@ table.table-hover {
   table-layout: fixed;
 }
 
+table.table-hover td {
+  vertical-align: middle;
+}
+
 table.table-hover th:first-child,
 table.table-hover td:first-child {
   width: 2rem;
   text-align: center;
 }
 
-table.table-hover th:last-child,
-table.table-hover td:last-child {
+table.table-hover th:nth-child(3),
+table.table-hover td:nth-child(3) {
   width: 8rem;
   text-align: right;
 }
@@ -52,22 +56,30 @@ table.table-hover tr.file-entry.selected:hover td {
   background-color: var(--mu-primary-background);
 }
 
-.delete-cell {
+th.delete-col,
+td.delete-cell {
   width: 3rem;
-  text-align: center;
+  text-align: right;
+  vertical-align: middle;
+}
+
+td.delete-cell form {
+  margin: 0;
+  display: inline;
 }
 
 .btn-delete {
-  background: none;
-  border: none;
+  all: unset;
   cursor: pointer;
-  font-size: 1rem;
-  padding: 0;
-  opacity: 0.5;
+  opacity: 0.4;
+  line-height: 0;
+  display: inline-block;
+  color: #333 !important;
 }
 
 .btn-delete:hover {
   opacity: 1;
+  color: var(--mu-error) !important;
 }
 
 .actions {

@@ -47,7 +47,7 @@
               <th></th>
               <th>Nom</th>
               <th>Taille</th>
-              {% if not intent.client_url %}<th></th>{% endif %}
+              {% if not intent.client_url %}<th class="delete-col"></th>{% endif %}
             </tr>
           </thead>
           <tbody>
@@ -60,7 +60,7 @@
                   {% if not intent.client_url %}
                     <td class="delete-cell">
                       <form method="post" action="{{ url_for('delete', path=entry.path.lstrip('/')) }}" onclick="event.stopPropagation()" onsubmit="return confirm('Supprimer le dossier {{ entry.name }} ?')">
-                        <button type="submit" class="btn-delete" title="Supprimer">{{ icon("trash-2") }}</button>
+                        <button type="submit" class="btn-delete" title="Supprimer">{{ icon("trash-2", 24) }}</button>
                       </form>
                     </td>
                   {% endif %}
@@ -73,7 +73,7 @@
                   {% if not intent.client_url %}
                     <td class="delete-cell">
                       <form method="post" action="{{ url_for('delete', path=entry.path.lstrip('/')) }}" onclick="event.stopPropagation()" onsubmit="return confirm('Supprimer {{ entry.name }} ?')">
-                        <button type="submit" class="btn-delete" title="Supprimer">{{ icon("trash-2") }}</button>
+                        <button type="submit" class="btn-delete" title="Supprimer">{{ icon("trash-2", 24) }}</button>
                       </form>
                     </td>
                   {% endif %}

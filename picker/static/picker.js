@@ -58,8 +58,9 @@ document.querySelectorAll(".file-entry[data-path]").forEach(el => {
 document.getElementById("btn-select")?.addEventListener("click", async () => {
   if (selectedFiles.length === 0) return;
 
-  const wantUrl = INTENT_TYPE.includes("url");
-  const wantContent = INTENT_TYPE.includes("content");
+  const wantSharingUrl = INTENT_TYPE.includes("sharingUrl");
+  const wantDownloadUrl = INTENT_TYPE.includes("downloadUrl");
+  const wantPayload = INTENT_TYPE.includes("payload");
   const fileUrl = (path) => WEBDAV_BASE + path;
 
   const results = await Promise.all(selectedFiles.map(async (f) => {
@@ -68,11 +69,13 @@ document.getElementById("btn-select")?.addEventListener("click", async () => {
       mimeType: f.contentType,
       size: f.size,
     };
-    if (wantUrl) {
+    if (wantSharingUrl) {
       result.sharingUrl = fileUrl(f.path);
+    }
+    if (wantDownloadUrl) {
       result.downloadUrl = fileUrl(f.path);
     }
-    if (wantContent) {
+    if (wantPayload) {
       result.payload = await fetchContent(f.path);
     }
     return result;

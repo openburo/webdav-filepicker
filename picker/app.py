@@ -47,7 +47,7 @@ def parse_intent_params() -> dict:
         "allowed_mime_types": request.args.get("allowedMimeTypes", "").split(",")
         if request.args.get("allowedMimeTypes")
         else [],
-        "type": request.args.get("type", "url").split(","),
+        "type": request.args.get("type", "sharingUrl").split(","),
     }
 
 
