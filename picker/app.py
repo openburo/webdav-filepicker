@@ -201,7 +201,7 @@ async def api_save(path: str = "/"):
             "name": name,
             "sharingUrl": public_base_url()
             + url_for("preview", path=file_path.lstrip("/")),
-            "downloadUrl": f"http://localhost:8080{file_path}",
+            "downloadUrl": os.environ.get("WEBDAV_PUBLIC_URL") + file_path,
         }
     )
 
