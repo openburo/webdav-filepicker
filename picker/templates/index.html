@@ -56,11 +56,12 @@
           </thead>
           <tbody>
             {% for entry in entries %}
+              {% set dir_url = url_for(browse_route, path=entry.path.lstrip('/'), **request.args) %}
               {% if entry.is_dir %}
-                <tr>
-                  <td>{{ icon("folder") }}</td>
-                  <td><a href="{{ url_for(browse_route, path=entry.path.lstrip('/'), **request.args) }}">{{ entry.name }}</a></td>
-                  <td></td>
+                <tr class="row-link">
+                  <td><a href="{{ dir_url }}">{{ icon("folder") }}</a></td>
+                  <td><a href="{{ dir_url }}">{{ entry.name }}</a></td>
+                  <td><a href="{{ dir_url }}"></a></td>
                   {% if not intent.client_url %}
                     <td class="delete-cell">
                       <form method="post" action="{{ url_for('delete', path=entry.path.lstrip('/')) }}" onclick="event.stopPropagation()" onsubmit="return confirm('Supprimer le dossier {{ entry.name }} ?')">
@@ -83,10 +84,11 @@
                     <td>{{ entry.size | filesizeformat if entry.size else '' }}</td>
                   </tr>
                 {% else %}
-                  <tr>
-                    <td>{{ icon("file") }}</td>
-                    <td><a href="{{ url_for('preview', path=entry.path.lstrip('/')) }}">{{ entry.name }}</a></td>
-                    <td>{{ entry.size | filesizeformat if entry.size else '' }}</td>
+                  {% set file_url = url_for('preview', path=entry.path.lstrip('/')) %}
+                  <tr class="row-link">
+                    <td><a href="{{ file_url }}">{{ icon("file") }}</a></td>
+                    <td><a href="{{ file_url }}">{{ entry.name }}</a></td>
+                    <td><a href="{{ file_url }}">{{ entry.size | filesizeformat if entry.size else '' }}</a></td>
                     {% if not intent.client_url %}
                       <td class="delete-cell">
                         <form method="post" action="{{ url_for('delete', path=entry.path.lstrip('/')) }}" onclick="event.stopPropagation()" onsubmit="return confirm('Supprimer {{ entry.name }} ?')">
