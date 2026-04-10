@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAVE — Client</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='mu.amber.css') }}">
+    <style>
+      #picker-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+      #picker-overlay.active { display: flex; }
+      #picker-iframe {
+        width: 80%; height: 80%;
+        border: none; border-radius: 0.5rem;
+        background: white;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>SAVE</h1>
+      <p><a href="{{ url_for('index') }}">&larr; Retour</a></p>
+
+      <form id="save-form">
+        <label>Fichier à envoyer
+          <input type="file" name="file" required>
+        </label>
+
+        <fieldset>
+          <legend>Mode de transmission</legend>
+          <label><input type="radio" name="sourceType" value="payload" checked> Payload (base64)</label>
+          <label><input type="radio" name="sourceType" value="downloadUrl"> Download URL</label>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary">Choisir la destination</button>
+      </form>
+
+      <div id="result"></div>
+
+      <div id="picker-overlay">
+        <iframe id="picker-iframe"></iframe>
+      </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='utils.js') }}"></script>
+    <script>
+      const PICKER_URL = "{{ picker_url }}";
+      let currentIntentId = null;
+      let pendingPayload = null;
+
+      document.getElementById("save-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const file = form.querySelector('[name="file"]').files[0];
+        if (!file) return;
+
+        const sourceType = form.querySelector('[name="sourceType"]:checked').value;
+
+        currentIntentId = generateId();
+
+        const params = new URLSearchParams();
+        params.set("action", "SAVE");
+        params.set("clientUrl", window.location.origin);
+        params.set("id", currentIntentId);
+        params.set("name", file.name);
+        params.set("mimeType", file.type);
+        params.set("size", file.size);
+        params.set("sourceType", sourceType);
+
+        if (sourceType === "payload") {
+          const reader = new FileReader();
+          reader.onload = () => {
+            pendingPayload = reader.result.split(",")[1];
+            document.getElementById("picker-iframe").src = PICKER_URL + "?" + params.toString();
+            document.getElementById("picker-overlay").classList.add("active");
+          };
+          reader.readAsDataURL(file);
+        } else {
+          document.getElementById("picker-iframe").src = PICKER_URL + "?" + params.toString();
+          document.getElementById("picker-overlay").classList.add("active");
+        }
+      });
+
+      function closePicker() {
+        document.getElementById("picker-overlay").classList.remove("active");
+        document.getElementById("picker-iframe").src = "";
+        pendingPayload = null;
+      }
+
+      document.getElementById("picker-overlay").addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) closePicker();
+      });
+
+      window.addEventListener("message", (e) => {
+        const pickerOrigin = new URL(PICKER_URL).origin;
+        if (e.origin !== pickerOrigin) return;
+
+        const data = e.data;
+        if (!data || !data.status) return;
+        if (data.id && data.id !== currentIntentId) return;
+
+        const result = document.getElementById("result");
+
+        if (data.status === "ready" && pendingPayload) {
+          const iframe = document.getElementById("picker-iframe");
+          iframe.contentWindow.postMessage(
+            { action: "upload", id: currentIntentId, payload: pendingPayload },
+            pickerOrigin
+          );
+        } else if (data.status === "done") {
+          const rows = data.results.map(r =>
+            `<tr><td><a href="${r.sharingUrl || '#'}">${r.name}</a></td></tr>`
+          ).join("");
+          result.innerHTML = `
+          <div class="alert alert-success alert-dismissible">
+            <span class="alert-title">Fichier enregistré</span>
+            <table class="table-compact">
+              <thead><tr><th>Nom</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+            <button class="alert-close" aria-label="Close" onclick="this.parentElement.remove()">&times;</button>
+          </div>`;
+          closePicker();
+        } else if (data.status === "cancel") {
+          result.innerHTML = `
+          <div class="alert alert-info alert-dismissible">
+            <p>Enregistrement annulé.</p>
+            <button class="alert-close" aria-label="Close" onclick="this.parentElement.remove()">&times;</button>
+          </div>`;
+          closePicker();
+        } else if (data.status === "error") {
+          result.innerHTML = `
+          <div class="alert alert-error alert-dismissible">
+            <span class="alert-title">Erreur</span>
+            <p>${data.message}</p>
+            <button class="alert-close" aria-label="Close" onclick="this.parentElement.remove()">&times;</button>
+          </div>`;
+          closePicker();
+        }
+      });
+    </script>
+  </body>
+</html>

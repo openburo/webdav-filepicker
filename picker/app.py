@@ -1,4 +1,4 @@
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from fnmatch import fnmatch
 
 from quart import (
@@ -12,7 +12,15 @@ from quart import (
     url_for,
 )
 
-from picker.webdav import download_file, file_info, list_files, mkdir, remove
+from picker.webdav import (
+    download_file,
+    download_from_url,
+    file_info,
+    list_files,
+    mkdir,
+    remove,
+    upload_bytes,
+)
 
 import os
 
@@ -59,6 +67,7 @@ def matches_mime_filter(content_type: str, allowed: list[str]) -> bool:
 def parse_intent_params() -> dict:
     """Parse intent parameters from query string."""
     return {
+        "action": request.args.get("action", "PICK"),
         "client_url": request.args.get("clientUrl", ""),
         "intent_id": request.args.get("id", ""),
         "multiple": request.args.get("multiple", "false") == "true",
@@ -66,6 +75,11 @@ def parse_intent_params() -> dict:
         if request.args.get("allowedMimeTypes")
         else [],
         "type": request.args.get("type", "sharingUrl").split(","),
+        "save_name": request.args.get("name", ""),
+        "save_mime_type": request.args.get("mimeType", ""),
+        "save_size": request.args.get("size", ""),
+        "source_type": request.args.get("sourceType", "payload"),
+        "download_url": request.args.get("downloadUrl", ""),
     }
 
 
@@ -82,7 +96,12 @@ async def capabilities():
                     "action": "PICK",
                     "properties": {"mimeTypes": ["*/*"]},
                     "path": public_base_url() + url_for("browse"),
-                }
+                },
+                {
+                    "action": "SAVE",
+                    "properties": {"mimeTypes": ["*/*"]},
+                    "path": public_base_url() + url_for("browse"),
+                },
             ],
         }
     )
@@ -148,6 +167,31 @@ async def content(path: str):
         path = "/" + path
     data = download_file(path)
     return jsonify({"content": b64encode(data).decode()})
+
+
+@app.route("/api/save/<path:path>", methods=["POST"])
+async def api_save(path: str):
+    """Save a file to the given directory. Accepts JSON with payload (base64) or downloadUrl."""
+    if not path.startswith("/"):
+        path = "/" + path
+    body = await request.get_json()
+    name = body["name"]
+    if "payload" in body:
+        data = b64decode(body["payload"])
+    elif "downloadUrl" in body:
+        data = download_from_url(body["downloadUrl"])
+    else:
+        return jsonify({"error": "No payload or downloadUrl provided"}), 400
+    upload_bytes(path, name, data)
+    file_path = path.rstrip("/") + "/" + name
+    return jsonify(
+        {
+            "name": name,
+            "sharingUrl": public_base_url()
+            + url_for("preview", path=file_path.lstrip("/")),
+            "downloadUrl": f"http://localhost:8080{file_path}",
+        }
+    )
 
 
 @app.route("/")

@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
   <body>
+    {% if intent.client_url %}
+      <button id="btn-cancel" class="close-btn" title="Fermer">{{ icon("x", 24) }}</button>
+    {% endif %}
+
     {% for message in get_flashed_messages() %}
       <div class="toast toast-top-right">
         <div class="alert alert-success alert-dismissible" role="alert">
@@ -53,7 +57,7 @@
           <tbody>
             {% for entry in entries %}
               {% if entry.is_dir %}
-                <tr class="clickable" onclick="location.href='{{ url_for('browse', path=entry.path.lstrip('/'), **request.args) }}'">
+                <tr>
                   <td>{{ icon("folder") }}</td>
                   <td><a href="{{ url_for('browse', path=entry.path.lstrip('/'), **request.args) }}">{{ entry.name }}</a></td>
                   <td></td>
@@ -66,14 +70,20 @@
                   {% endif %}
                 </tr>
               {% else %}
-                {% if intent.client_url %}
+                {% if intent.action == "PICK" and intent.client_url %}
                   <tr class="clickable file-entry" data-path="{{ entry.path }}" data-name="{{ entry.name }}" data-size="{{ entry.size or 0 }}" data-content-type="{{ entry.content_type }}">
                     <td>{{ icon("file") }}</td>
                     <td>{{ entry.name }}</td>
                     <td>{{ entry.size | filesizeformat if entry.size else '' }}</td>
                   </tr>
+                {% elif intent.action == "SAVE" and intent.client_url %}
+                  <tr>
+                    <td>{{ icon("file") }}</td>
+                    <td>{{ entry.name }}</td>
+                    <td>{{ entry.size | filesizeformat if entry.size else '' }}</td>
+                  </tr>
                 {% else %}
-                  <tr class="clickable" onclick="location.href='{{ url_for('preview', path=entry.path.lstrip('/')) }}'">
+                  <tr>
                     <td>{{ icon("file") }}</td>
                     <td><a href="{{ url_for('preview', path=entry.path.lstrip('/')) }}">{{ entry.name }}</a></td>
                     <td>{{ entry.size | filesizeformat if entry.size else '' }}</td>
@@ -96,20 +106,28 @@
 
       {% if intent.client_url %}
         <div class="actions">
-          <div role="group">
-            <button id="btn-cancel" class="btn btn-secondary">Annuler</button>
+          {% if intent.action == "SAVE" %}
+            <div role="group">
+              <input type="text" id="save-filename" value="{{ intent.save_name }}" placeholder="Nom du fichier">
+              <button id="btn-save" class="btn btn-primary">Enregistrer ici</button>
+            </div>
+          {% else %}
             <button id="btn-select" class="btn btn-primary" disabled>Sélectionner</button>
-          </div>
+          {% endif %}
         </div>
       {% endif %}
 
     </main>
 
     <script>
+      const ACTION = {{ intent.action | tojson }};
       const MULTIPLE = {{ intent.multiple | tojson }};
       const CLIENT_URL = {{ intent.client_url | tojson }};
       const INTENT_ID = {{ intent.intent_id | tojson }};
       const INTENT_TYPE = {{ intent.type | tojson }};
+      const SOURCE_TYPE = {{ intent.source_type | tojson }};
+      const DOWNLOAD_URL = {{ intent.download_url | tojson }};
+      const CURRENT_PATH = {{ current_path | tojson }};
       const WEBDAV_BASE = "http://10.4.0.32:8080";
     </script>
     <script src="{{ url_for('static', filename='picker.js') }}"></script>

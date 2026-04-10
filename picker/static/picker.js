@@ -1,7 +1,10 @@
 const selectedFiles = [];
+let savePayload = null;
+
 
 function updateButton() {
   const btn = document.getElementById("btn-select");
+  if (!btn) return;
   if (selectedFiles.length === 0) {
     btn.disabled = true;
     btn.textContent = "Sélectionner";
@@ -26,6 +29,7 @@ async function fetchContent(path) {
   return data.content;
 }
 
+// PICK mode: file selection
 document.querySelectorAll(".file-entry[data-path]").forEach(el => {
   el.addEventListener("click", () => {
     const file = {
@@ -55,6 +59,7 @@ document.querySelectorAll(".file-entry[data-path]").forEach(el => {
   });
 });
 
+// PICK mode: send selection
 document.getElementById("btn-select")?.addEventListener("click", async () => {
   if (selectedFiles.length === 0) return;
 
@@ -88,6 +93,55 @@ document.getElementById("btn-select")?.addEventListener("click", async () => {
   });
 });
 
+// SAVE mode: receive payload from client and handle save
+if (ACTION === "SAVE") {
+  // Notify client we're ready to receive payload
+  sendMessage({ status: "ready", id: INTENT_ID });
+
+  // Listen for payload from client
+  window.addEventListener("message", (e) => {
+    if (!e.data || e.data.action !== "upload") return;
+    if (e.data.id !== INTENT_ID) return;
+    savePayload = e.data.payload;
+  });
+
+  document.getElementById("btn-save")?.addEventListener("click", async () => {
+    const filename = document.getElementById("save-filename").value.trim();
+    if (!filename) return;
+
+    const body = { name: filename };
+
+    if (SOURCE_TYPE === "downloadUrl" && DOWNLOAD_URL) {
+      body.downloadUrl = DOWNLOAD_URL;
+    } else if (savePayload) {
+      body.payload = savePayload;
+    } else if (DOWNLOAD_URL) {
+      body.downloadUrl = DOWNLOAD_URL;
+    } else {
+      sendMessage({ status: "error", id: INTENT_ID, message: "No file data received" });
+      return;
+    }
+
+    const resp = await fetch("/api/save" + CURRENT_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (resp.ok) {
+      const result = await resp.json();
+      sendMessage({
+        status: "done",
+        id: INTENT_ID,
+        results: [result],
+      });
+    } else {
+      sendMessage({ status: "error", id: INTENT_ID, message: "Upload failed" });
+    }
+  });
+}
+
+// Cancel
 document.getElementById("btn-cancel")?.addEventListener("click", () => {
   sendMessage({
     status: "cancel",

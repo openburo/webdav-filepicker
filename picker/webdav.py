@@ -26,6 +26,23 @@ def download_file(path: str) -> bytes:
     return buf.getvalue()
 
 
+def upload_bytes(directory: str, filename: str, data: bytes) -> None:
+    """Upload bytes to the given directory."""
+    import io
+
+    remote_path = directory.rstrip("/") + "/" + filename
+    client.upload_fileobj(io.BytesIO(data), remote_path)
+
+
+def download_from_url(url: str) -> bytes:
+    """Download content from an external URL."""
+    import httpx
+
+    resp = httpx.get(url)
+    resp.raise_for_status()
+    return resp.content
+
+
 def remove(path: str) -> None:
     """Delete a file or directory."""
     client.remove(path)
