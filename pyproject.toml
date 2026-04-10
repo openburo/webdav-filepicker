@@ -15,6 +15,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "canaille[front,oidc]>=0.2.4",
+    "canaille[front,oidc,sqlite]>=0.2.4",
     "prek>=0.3.8",
 ]

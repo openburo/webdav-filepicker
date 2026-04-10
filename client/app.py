@@ -1,15 +1,15 @@
-import json
-from pathlib import Path
-
+import httpx
 from quart import Quart, render_template
 
 app = Quart(__name__)
 
-CAPABILITIES_PATH = Path(__file__).parent.parent / "capabilities.json"
+PICKER_BASE_URL = "http://10.4.0.32:5000"
 
 
-def load_picker_url() -> str:
-    data = json.loads(CAPABILITIES_PATH.read_text())
+async def load_picker_url() -> str:
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"{PICKER_BASE_URL}/.well-known/capabilities.json")
+        data = resp.json()
     for cap in data["capabilities"]:
         if cap["action"] == "PICK":
             return cap["path"]
@@ -18,5 +18,5 @@ def load_picker_url() -> str:
 
 @app.route("/")
 async def index():
-    picker_url = load_picker_url()
+    picker_url = await load_picker_url()
     return await render_template("index.html", picker_url=picker_url)

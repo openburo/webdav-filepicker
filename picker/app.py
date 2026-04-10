@@ -1,15 +1,31 @@
 from base64 import b64encode
 from fnmatch import fnmatch
 
-from quart import Quart, flash, jsonify, render_template, request, redirect, url_for
-
-from quart import Response
+from quart import (
+    Quart,
+    Response,
+    flash,
+    jsonify,
+    render_template,
+    request,
+    redirect,
+    url_for,
+)
 
 from picker.webdav import download_file, file_info, list_files, mkdir, remove
+
+import os
 
 app = Quart(__name__)
 app.secret_key = "dev"
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "")
+
+
+def public_base_url() -> str:
+    if PUBLIC_URL:
+        return PUBLIC_URL.rstrip("/")
+    return request.host_url.rstrip("/")
 
 
 def normalize_path(path: str) -> str:
@@ -51,6 +67,25 @@ def parse_intent_params() -> dict:
         else [],
         "type": request.args.get("type", "sharingUrl").split(","),
     }
+
+
+@app.route("/.well-known/capabilities.json")
+async def capabilities():
+    return jsonify(
+        {
+            "id": "webdav-filepicker",
+            "name": "WebDAV File Picker",
+            "version": "1",
+            "url": public_base_url(),
+            "capabilities": [
+                {
+                    "action": "PICK",
+                    "properties": {"mimeTypes": ["*/*"]},
+                    "path": public_base_url() + url_for("browse"),
+                }
+            ],
+        }
+    )
 
 
 @app.route("/delete/<path:path>", methods=["POST"])
